@@ -1,8 +1,5 @@
 import pytest
 
-print("-- tests/test_tests.py --")
-
-
 def test_fail_once_1() -> None:
     test_fail_once_1.__dict__["n"] = test_fail_once_1.__dict__.get("n", 0) + 1
     if test_fail_once_1.__dict__["n"] == 1:

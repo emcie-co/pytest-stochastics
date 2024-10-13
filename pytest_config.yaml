@@ -4,15 +4,15 @@ tests:
 # The current format is: Branch : Strategy : [Tests]
   develop:
     coinflip:
-      - "tests/api/test_fail_twice.py:test_fail_twice_23"
-      - "tests/test_fail_once.py:test_fail_once_1"
+      - "tests/test_tests.py:test_fail_twice_23"
+      - "tests/test_tests.py:test_fail_once_1"
     90%:
-      - "tests/test_fail_once.py:foo1"
+      - "tests/test_tests.py:foo1"
   main: 
     90%:
-      - "tests/test_fail_once.py:test_fail_once_1"
-      - "tests/api/test_fail_twice.py:test_fail_twice_23"
-      - "tests/api/test_fail_twice.py:foo2"
+      - "tests/test_tests.py:test_fail_once_1"
+      - "tests/test_tests.py:test_fail_twice_23"
+      - "tests/test_tests.py:foo2"
 
 strategies:
   # What modes do we need?
@@ -25,4 +25,4 @@ strategies:
 
 prototypes: # Optional Prototype Section
   main: develop
-  wip/selective_runner: develop
+  master: develop

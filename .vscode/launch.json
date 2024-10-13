@@ -8,6 +8,8 @@
             "module": "pytest",
             "args": [
                 "-v",
+                "-s",
+                "--co",
                 "tests"
             ],
             "cwd": "${workspaceFolder}",

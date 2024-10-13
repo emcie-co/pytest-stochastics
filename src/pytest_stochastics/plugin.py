@@ -1,135 +1,115 @@
-from dataclasses import dataclass, field
-import sys
-from typing import Any
+from typing import Any, Iterator, Self
+
 import pytest
-from pathlib import Path
-import re
 import yaml
-import os
+from _pytest.nodes import Node
 
-print("-- `src/pytest_stochastics/plugin.py` --")
+from .data import RunnerStochasticsConfig
+from .helpers import Logger, read_git_branch
 
-# regex pattern for capturing the checked-out branch name
-REGEX_PATTERN_BRANCH = r"^ref: refs/heads/([\w\d_\-+./]+)\s*$"
-
-def find_git_root(start_path:str=".")-> Path | None:
-    """
-    Recursively search for the .git directory up the parent chain.
-    
-    :param start_path: The starting path for the search (default is current directory)
-    :return: The path containing the .git directory, or None if not found
-    """
-    current_path = os.path.abspath(start_path)
-    
-    while True:
-        if ".git" in os.listdir(current_path):
-            return Path(current_path)
-        
-        parent_path = os.path.dirname(current_path)
-        if parent_path == current_path:  # We've reached the root directory
-            return None
-        
-        current_path = parent_path
-
-
-
-def _log(*values: object, sep: str | None = " ", end: str | None = "\n") -> None:
-    # ANSI escape codes for colors
-    YELLOW_TEXT = "\033[38;2;255;255;0m"  # Bright yellow text
-    DARK_BLUE_BG = "\033[48;2;0;0;100m"   # Dark blue background
-    RESET = "\033[0m"  # Reset to default
-    
-    colored_values = [f"{YELLOW_TEXT}{DARK_BLUE_BG}{value}{RESET}" for value in values]
-    print(*colored_values, sep=sep, end=end, file=sys.stderr)
 
 # Plugin entry point
 def pytest_configure(config: pytest.Config) -> None:
-    _log("configuring runner selector...")
-    _log(f"== config.rootpath={config.rootpath}")
-    _log(f"== config.inipath={config.inipath}")
-    _log(f"== config.invocation_params={config.invocation_params}")
+    """Main entry point into the pytest plugin flow."""
 
-    _log("acquiring current branch name")
-    branch_name = ""
-    try:
-        git_path = find_git_root()
-        if git_path is None:
-            raise Exception("failed to find `.git`")
-        else:
-            git_path= git_path / ".git" / "HEAD"
-        with git_path.open("r") as f:
-            _log(f"== file `{git_path}` opened.")
-            res = re.search(REGEX_PATTERN_BRANCH, f.read())
-            _log(f"== pattern `{REGEX_PATTERN_BRANCH}` matched to: {res}.")
-            if res is not None:
-                branch_name = res.group(1)
-        _log(f"detected branch: {branch_name}")
-    except Exception as ex:
-        _log(f"?! branch discovery failure: {ex}")
-        _log("no branch detected, will be using fallback")
+    logger = Logger()
+    logger.info("Configuring runner selector...")
+    logger.debug(f"config.rootpath={config.rootpath}")
+    logger.debug(f"config.inipath={config.inipath}")
+    logger.debug(f"config.invocation_params={config.invocation_params}")
+
+    logger.info("Acquiring current branch name...")
+    branch_name = read_git_branch(logger)
 
     try:
         with open("pytest_config.yaml") as config_file:
-            _log("reading config file")
+            logger.info("Config file open, reading config file...")
             raw_yaml = config_file.read()
-            _log("parsing yaml")
+            logger.info("Read config file, parsing yaml...")
             parsed_yaml = yaml.safe_load(raw_yaml)
-            _log("processing config")
-            runner_config = ConfigRunnerStochastics(**parsed_yaml)
-            _log("configuring runner")
-            _log(f"== config={runner_config}")
-            runner_selector = RunnerStochastics(runner_config, config, branch_name)
-            _log("registering runner")
-            config.pluginmanager.register(runner_selector, "Runner-Selector")
-            _log("registered runner")
+            logger.info("Parsed yaml, processing config...")
+            runner_config = RunnerStochasticsConfig(**parsed_yaml)
+            logger.info("Config created, configuring runner...")
+            logger.debug(f"config={runner_config}")
+            runner_selector = RunnerStochastics(runner_config, branch_name, logger)
+            logger.info("Runner constructed, registering runner with pytest...")
+            confirmed_name = config.pluginmanager.register(runner_selector, "stochastics_runner")
+            if confirmed_name is None:
+                logger.error("Failed to register `stochastics_runner` plugin!")
+            logger.info(f"Registration of `{confirmed_name}` complete!")
     except Exception as ex:
-        _log(f"ERROR: failed to configure runner: {ex}")
-
-
-@dataclass
-class ConfigRunnerStochastics:
-    """Object to hold the parsed configuration yaml."""
-
-    tests: dict[str, dict[str, list[str]]]  # B : S : [T]
-    strategies: dict[str, dict[str, int]]
-    prototypes: dict[str, str] = field(default_factory=dict)  # B: B
-
-    def __init__(self, **kwarg_entries: dict[str, Any]) -> None:
-        self.__dict__.update(kwarg_entries)
-
-    def gen_test_lookup(self, branch: str) -> dict[str, tuple[str, str]]:
-        """Transpose the strategies dict and layer them so that every test has its strategy."""
-
-        branch_cursor = branch
-        lookup: dict[str, tuple[str, str]] = {}
-        while branch_cursor.lower() not in ("", "default"):
-            branch_config = self.tests.get(branch_cursor, {})
-            if branch_config:
-                for strat, tests in branch_config.items():
-                    for test in tests:
-                        test_id = re.sub(r":{1,}test_", "::test_", test)
-                        if test_id not in lookup:
-                            lookup[test_id] = (strat, branch_cursor)
-
-            branch_cursor = self.prototypes.get(branch_cursor, "default")
-        return lookup
+        logger.error(f"Failed to configure runner: {ex}")
 
 
 class RunnerStochastics:
-    runner_config: ConfigRunnerStochastics
-    pytest_config: pytest.Config
-    root_path: Path
+    runner_config: RunnerStochasticsConfig
     branch: str
     lookup_test_strategy: dict[str, tuple[str, str]]  # T : (S, B)
+    logger: Logger
 
-    def __init__(
-        self,
-        runner_config: ConfigRunnerStochastics,
-        pytest_config: pytest.Config,
-        current_branch: str,
-    ) -> None:
+    def __init__(self, runner_config: RunnerStochasticsConfig, current_branch: str, logger: Logger) -> None:
         self.runner_config = runner_config
-        self.pytest_config = pytest_config
         self.branch = current_branch
-
+        self.logger = logger
         self.lookup_test_strategy = self.runner_config.gen_test_lookup(self.branch)
+
+    def pytest_pycollect_makeitem(
+        self, collector: pytest.Module | pytest.Class, name: str, obj: object
+    ) -> None | pytest.Item | pytest.Collector | list[pytest.Item | pytest.Collector]:
+        if not name.startswith("test_"):
+            self.logger.debug(f"{name} is not a test - skipping.")
+            return None
+
+        nodeid = f"{collector.nodeid}::{name}"
+        if nodeid not in self.lookup_test_strategy:
+            self.logger.debug(f"No strategy found for {name}, not wrapping")
+            return None
+
+        strategy, _ = self.lookup_test_strategy[nodeid]
+        strategy_config = self.runner_config.strategy_configs.get(strategy, {})
+        out_of = strategy_config.get("out_of", 1)
+        at_least = strategy_config.get("at_least", 1)
+        self.logger.info(f"Wrapping stochastic function: `{name}` with strategy: `{strategy}`[{at_least}/{out_of}]")
+
+        return StochasticFunction.from_parent(
+            collector,
+            name=name,
+            obj=obj,
+            strategy=strategy,
+            at_least=at_least,
+            out_of=out_of,
+        )
+
+
+class StochasticFunction(pytest.Collector):
+    """Collector for stochastic tests.
+
+    Will try to collect every test_ function by checking against its config.
+    """
+
+    obj: object
+    strategy: str
+    at_least: int
+    out_of: int
+
+    @classmethod
+    def from_parent(cls, parent: Node, **kwargs: Any) -> Self:
+        """Cooperative constructor which pytest likes, use this instead of `__init__`."""
+
+        name = kwargs.pop("name")
+        obj = kwargs.pop("obj")
+        strategy = kwargs.pop("strategy")
+        at_least = kwargs.pop("at_least", "")
+        out_of = kwargs.pop("out_of", "")
+
+        wrapped = super().from_parent(parent, name=name, **kwargs)  # type: ignore
+        wrapped.obj = obj
+        wrapped.out_of = out_of
+        wrapped.at_least = at_least
+        wrapped.strategy = strategy
+        return wrapped
+
+    def collect(self) -> Iterator[pytest.Item]:
+        for i in range(self.out_of):
+            func_name = f"{i+1:>02d} of {self.out_of:>02d}" if self.out_of > 1 else self.name
+            yield pytest.Function.from_parent(self, name=func_name, callobj=self.obj)  # type: ignore
