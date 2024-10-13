@@ -1,0 +1,36 @@
+-- `src/pytest_stochastics/plugin.py` --
+-- init `src/pytest_stochastics` --
+-- tests/conftest.py --
+============================= test session starts =============================
+platform win32 -- Python 3.12.5, pytest-8.3.3, pluggy-1.5.0 -- C:\Users\emcie\AppData\Local\pypoetry\Cache\virtualenvs\pytest-stochastics-g8nWJHJn-py3.12\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\dev\pytest-stochastics
+configfile: pytest.ini
+plugins: stochastics-0.1.0, tap-3.4
+collecting ... -- tests/test_tests.py --
+collected 4 items
+
+tests/test_tests.py::test_fail_once_1 FAILED
+tests/test_tests.py::test_fail_twice_23 PASSED
+tests/test_tests.py::test_foo1 PASSED
+tests/test_tests.py::test_foo2 PASSED
+
+================================== FAILURES ===================================
+______________________________ test_fail_once_1 _______________________________
+
+    def test_fail_once_1() -> None:
+        test_fail_once_1.__dict__["n"] = test_fail_once_1.__dict__.get("n", 0) + 1
+        if test_fail_once_1.__dict__["n"] == 1:
+>           pytest.fail("oops")
+E           Failed: oops
+
+tests\test_tests.py:9: Failed
+============================== warnings summary ===============================
+..\..\Users\emcie\AppData\Local\pypoetry\Cache\virtualenvs\pytest-stochastics-g8nWJHJn-py3.12\Lib\site-packages\_pytest\config\__init__.py:831
+  C:\Users\emcie\AppData\Local\pypoetry\Cache\virtualenvs\pytest-stochastics-g8nWJHJn-py3.12\Lib\site-packages\_pytest\config\__init__.py:831: PytestAssertRewriteWarning: Module already imported so cannot be rewritten: pytest_stochastics.plugin
+    self.import_plugin(import_spec)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_tests.py::test_fail_once_1 - Failed: oops
+=================== 1 failed, 3 passed, 1 warning in 0.03s ====================

@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "pytest-stochastics"
+version = "0.1.0"
+description = ""
+authors = ["MCNatsu <nathan@emcie.co>"]
+readme = "README.md"
+packages = [{include = "pytest_stochastics", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pytest = "^8.3.3"
+PyYAML = "^6.0.2"
+types-PyYAML = "^6.0.12.20240917"
+pytest-tap = "^3.4"
+mypy = "^1.11.2"
+
+[tool.poetry.plugins.pytest11]
+stochastics = "pytest_stochastics"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

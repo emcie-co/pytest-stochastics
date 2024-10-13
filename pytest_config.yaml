@@ -1,0 +1,28 @@
+## v3
+
+tests:
+# The current format is: Branch : Strategy : [Tests]
+  develop:
+    coinflip:
+      - "tests/api/test_fail_twice.py:test_fail_twice_23"
+      - "tests/test_fail_once.py:test_fail_once_1"
+    90%:
+      - "tests/test_fail_once.py:foo1"
+  main: 
+    90%:
+      - "tests/test_fail_once.py:test_fail_once_1"
+      - "tests/api/test_fail_twice.py:test_fail_twice_23"
+      - "tests/api/test_fail_twice.py:foo2"
+
+strategies:
+  # What modes do we need?
+  coinflip:
+    at_least: 1
+    out_of: 2
+  90%:
+    at_least: 1
+    out_of: 10
+
+prototypes: # Optional Prototype Section
+  main: develop
+  wip/selective_runner: develop

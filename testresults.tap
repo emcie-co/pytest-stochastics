@@ -1,0 +1,13 @@
+1..4
+# TAP results for tests\test_tests.py
+not ok 1 tests\test_tests.py::test_fail_once_1
+# def test_fail_once_1() -> None:
+#         test_fail_once_1.__dict__["n"] = test_fail_once_1.__dict__.get("n", 0) + 1
+#         if test_fail_once_1.__dict__["n"] == 1:
+# >           pytest.fail("oops")
+# E           Failed: oops
+# 
+# tests\test_tests.py:9: Failed
+ok 2 tests\test_tests.py::test_fail_twice_23
+ok 3 tests\test_tests.py::test_foo1
+ok 4 tests\test_tests.py::test_foo2
