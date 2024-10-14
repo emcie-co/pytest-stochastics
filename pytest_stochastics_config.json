@@ -1,0 +1,57 @@
+{
+    "branch_tests": [
+        {
+            "branch": "develop",
+            "strategy_tests": [
+                {
+                    "strategy": "coinflip",
+                    "tests": [
+                        "tests/test_tests.py::test_fail_once_1",
+                        "tests/test_tests.py::test_fail_twice_23"
+                    ]
+                },
+                {
+                    "strategy": "mostly",
+                    "tests": [
+                        "tests/test_tests.py::foo1"
+                    ]
+                }
+            ]
+        },
+        {
+            "branch": "main",
+            "strategy_tests": [
+                {
+                    "strategy": "mostly",
+                    "tests": [
+                        "tests/test_tests.py::test_fail_once_1",
+                        "tests/test_tests.py::test_fail_twice_23",
+                        "tests/test_tests.py::foo2"
+                    ]
+                }
+            ]
+        }
+    ],
+    "strategies": [
+        {
+            "strategy": "coinflip",
+            "at_least": 1,
+            "out_of": 2
+        },
+        {
+            "strategy": "mostly",
+            "at_least": 2,
+            "out_of": 3
+        }
+    ],
+    "branch_fallbacks": [
+        {
+            "branch": "main",
+            "overrides": "develop"
+        },
+        {
+            "branch": "master",
+            "overrides": "main"
+        }
+    ]
+}

@@ -11,11 +11,11 @@ python = "^3.12"
 pytest = "^8.3.3"
 PyYAML = "^6.0.2"
 types-PyYAML = "^6.0.12.20240917"
-pytest-tap = "^3.4"
 mypy = "^1.11.2"
+dataclasses-json = "^0.6.7"
 
 [tool.poetry.plugins.pytest11]
-stochastics = "pytest_stochastics"
+pytest_stochastics = "pytest_stochastics.main"
 
 [build-system]
 requires = ["poetry-core"]
