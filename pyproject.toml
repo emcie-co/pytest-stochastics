@@ -4,11 +4,11 @@ version = "0.1.1"
 description = ""
 authors = ["MCNatsu <nathan@emcie.co>"]
 readme = "README.md"
-packages = [{include = "pytest_stochastics", from = "src"}]
+packages = [{ include = "pytest_stochastics", from = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-pytest = "^8.3.3"
+pytest = "^8.0.0"
 mypy = "^1.11.2"
 dataclasses-json = "^0.6.7"
 

@@ -34,6 +34,10 @@ class RunnerStochastics:
         test_threshold = self.lookup_test_thresholds[nodeid]
 
         out_of = test_threshold.out_of
+        if out_of == 1:
+            self.logger.debug(f"Redundant threshold found for {name}, not wrapping")
+            return None
+        
         at_least = test_threshold.at_least
         self.logger.info(
             f"Wrapping stochastic function: `{name}` with threshold: `{test_threshold.threshold}`[{at_least}/{out_of}]"
