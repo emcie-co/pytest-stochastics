@@ -1,11 +1,11 @@
 {
-    "branch_tests": [
+    "plan_tests": [
         {
-            "branch": "default",
-            "_comment": "This is the default mode, if no strategy is set. no need to define it explicitly. just a demonstration.",
-            "strategy_tests": [
+            "plan": "default",
+            "_comment": "This is the default mode, if no threshold is set. no need to define it explicitly. just a demonstration.",
+            "threshold_tests": [
                 {
-                    "strategy": "default",
+                    "threshold": "default",
                     "tests": [
                         "tests/test_func_tests.py::test_fail",
                         "tests/test_func_tests.py::test_pass",
@@ -19,24 +19,24 @@
             ]
         },
         {
-            "branch": "weak",
-            "_comment": "This is a sample _weak_ mode. it allocates strategies such that the tests will pass.",
-            "strategy_tests": [
+            "plan": "weak",
+            "_comment": "This is a sample _weak_ mode. it allocates thresholds such that the tests will pass.",
+            "threshold_tests": [
                 {
-                    "strategy": "disable",
+                    "threshold": "disable",
                     "tests": [
                         "tests/test_func_tests.py::test_fail"
                     ]
                 },
                 {
-                    "strategy": "coinflip",
+                    "threshold": "coinflip",
                     "tests": [
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_twice_23"
                     ]
                 },
                 {
-                    "strategy": "mostly",
+                    "threshold": "mostly",
                     "tests": [
                         "tests/test_func_tests.py::test_fixture_true",
                         "tests/test_func_tests.py::test_fail_once_1",
@@ -46,17 +46,17 @@
             ]
         },
         {
-            "branch": "strong",
-            "_comment": "This is a sample _strong_ mode, it 'upgrades' all the weak strategies. expected to fail.",
-            "strategy_tests": [
+            "plan": "strong",
+            "_comment": "This is a sample _strong_ mode, it 'upgrades' all the weak thresholds. expected to fail.",
+            "threshold_tests": [
                 {
-                    "strategy": "coinflip",
+                    "threshold": "coinflip",
                     "tests": [
                         "tests/test_func_tests.py::test_fail"
                     ]
                 },
                 {
-                    "strategy": "mostly",
+                    "threshold": "mostly",
                     "tests": [
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_twice_23"
@@ -65,31 +65,31 @@
             ]
         }
     ],
-    "strategies": [
+    "thresholds": [
         {
-            "strategy": "disable",
+            "threshold": "disable",
             "at_least": 0,
             "out_of": 0
         },
         {
-            "strategy": "default",
+            "threshold": "default",
             "at_least": 1,
             "out_of": 1
         },
         {
-            "strategy": "coinflip",
+            "threshold": "coinflip",
             "at_least": 1,
             "out_of": 2
         },
         {
-            "strategy": "mostly",
+            "threshold": "mostly",
             "at_least": 2,
             "out_of": 3
         }
     ],
-    "branch_fallbacks": [
+    "plan_fallbacks": [
         {
-            "branch": "strong",
+            "plan": "strong",
             "overrides": "weak"
         }
     ]

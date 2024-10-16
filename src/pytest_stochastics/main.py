@@ -3,10 +3,9 @@ from typing import Any
 import pytest
 from _pytest.config import Notset
 
-from pytest_stochastics.helpers import read_git_branch
 from pytest_stochastics.logger import Logger
 from pytest_stochastics.runner import RunnerStochastics
-from pytest_stochastics.runner_data import RunnerStochasticsConfig, BranchId
+from pytest_stochastics.runner_data import RunnerStochasticsConfig, PlanId
 
 PYTEST_STOCHASTICS_CONFIG_PATH = "pytest_stochastics_config.json"
 
@@ -14,11 +13,11 @@ PYTEST_STOCHASTICS_CONFIG_PATH = "pytest_stochastics_config.json"
 def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup("stochastics")
     group.addoption(
-        "--branch",
+        "--plan",
         action="store",
-        dest="branch",
+        dest="plan",
         default=None,
-        help="Specify the branch name to use for stochastic testing",
+        help="Specify the plan name to use for stochastic testing",
     )
 
 
@@ -33,10 +32,10 @@ def pytest_configure(config: pytest.Config) -> None:
     logger.debug(f"config.inipath={config.inipath}")
     logger.debug(f"config.invocation_params={config.invocation_params}")
 
-    branch_name: str | Notset = config.getoption("branch")
-    if not branch_name or isinstance(branch_name, Notset):
-        branch_name = read_git_branch(logger)
-    logger.info(f"Using branch: {branch_name}")
+    plan_name: str | Notset = config.getoption("plan")
+    if not plan_name or isinstance(plan_name, Notset):
+        plan_name = "default"
+    logger.info(f"Using plan: {plan_name}")
 
     try:
         with open(PYTEST_STOCHASTICS_CONFIG_PATH) as config_file:
@@ -48,7 +47,7 @@ def pytest_configure(config: pytest.Config) -> None:
                 raise Exception(f"expected `RunnerStochasticsConfig` got {runner_config}")
             logger.info("Config created, configuring runner...")
             logger.debug(f"config={runner_config}")
-            runner_selector = RunnerStochastics(BranchId(branch_name), runner_config, logger)
+            runner_selector = RunnerStochastics(PlanId(plan_name), runner_config, logger)
             logger.info("Runner constructed, registering runner with pytest...")
             confirmed_name = config.pluginmanager.register(runner_selector, DESIRED_RUNNER_NAME)
             if confirmed_name is None:

@@ -20,7 +20,7 @@
             "module": "pytest",
             "args": [
                 "-v",
-                "--branch=default"
+                "--plan=default"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
@@ -35,7 +35,7 @@
             "module": "pytest",
             "args": [
                 "-v",
-                "--branch=weak"
+                "--plan=weak"
             ],
             "cwd": "${workspaceFolder}",
             "env": {
@@ -50,7 +50,7 @@
             "module": "pytest",
             "args": [
                 "-v",
-                "--branch=strong"
+                "--plan=strong"
             ],
             "cwd": "${workspaceFolder}",
             "env": {

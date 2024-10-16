@@ -5,14 +5,14 @@ from _pytest.terminal import TerminalReporter
 
 from pytest_stochastics.collector import StochasticFunction, StochasticFunctionCollector
 from pytest_stochastics.logger import Logger
-from pytest_stochastics.runner_data import BranchId, RunnerStochasticsConfig, TestId, gen_fallback_lookup
+from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig, TestId, gen_fallback_lookup
 
 
 class RunnerStochastics:
-    def __init__(self, current_branch: str, runner_config: RunnerStochasticsConfig, logger: Logger) -> None:
-        self.branch = current_branch
+    def __init__(self, current_plan: str, runner_config: RunnerStochasticsConfig, logger: Logger) -> None:
+        self.plan = current_plan
         self.runner_config = runner_config
-        self.lookup_test_strategies = gen_fallback_lookup(runner_config, BranchId(current_branch))
+        self.lookup_test_thresholds = gen_fallback_lookup(runner_config, PlanId(current_plan))
         self.logger = logger
 
         self._test_tracking: dict[str, int] = {}
@@ -27,23 +27,23 @@ class RunnerStochastics:
             return None
 
         nodeid = TestId(f"{collector.nodeid}::{name}")
-        if nodeid not in self.lookup_test_strategies:
-            self.logger.debug(f"No strategy found for {name}, not wrapping")
+        if nodeid not in self.lookup_test_thresholds:
+            self.logger.debug(f"No threshold found for {name}, not wrapping")
             return None
 
-        test_strategy = self.lookup_test_strategies[nodeid]
+        test_threshold = self.lookup_test_thresholds[nodeid]
 
-        out_of = test_strategy.out_of
-        at_least = test_strategy.at_least
+        out_of = test_threshold.out_of
+        at_least = test_threshold.at_least
         self.logger.info(
-            f"Wrapping stochastic function: `{name}` with strategy: `{test_strategy.strategy}`[{at_least}/{out_of}]"
+            f"Wrapping stochastic function: `{name}` with threshold: `{test_threshold.threshold}`[{at_least}/{out_of}]"
         )
 
         return StochasticFunctionCollector.from_parent(
             collector,
             name=name,
             obj=obj,
-            strategy=test_strategy.strategy,
+            threshold=test_threshold.threshold,
             at_least=at_least,
             out_of=out_of,
         )
@@ -57,13 +57,13 @@ class RunnerStochastics:
             return None
 
         key = item.parent.nodeid
-        strategy = item.parent.strategy
+        threshold = item.parent.threshold
         at_least = item.parent.at_least
         out_of = item.parent.out_of
         if key not in self._test_tracking:
             self._test_tracking[key] = at_least
             print(
-                f"\n\r{"\033[94m"}StochasticSet:{"\033[0m"} {key} [{"\033[94m"}{strategy}: {at_least}/{out_of}{"\033[0m"}]",
+                f"\n\r{"\033[94m"}StochasticSet:{"\033[0m"} {key} [{"\033[94m"}{threshold}: {at_least}/{out_of}{"\033[0m"}]",
                 end="",
             )
 

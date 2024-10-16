@@ -8,7 +8,7 @@ class StochasticFunctionCollector(pytest.Collector):
     """Collector for stochastic tests."""
 
     obj: object
-    strategy: str
+    threshold: str
     at_least: int
     out_of: int
     results: list[bool]
@@ -19,7 +19,7 @@ class StochasticFunctionCollector(pytest.Collector):
 
         name = kwargs.pop("name")
         obj = kwargs.pop("obj")
-        strategy = kwargs.pop("strategy")
+        threshold = kwargs.pop("threshold")
         at_least = kwargs.pop("at_least")
         out_of = kwargs.pop("out_of")
 
@@ -27,7 +27,7 @@ class StochasticFunctionCollector(pytest.Collector):
         wrapped.obj = obj
         wrapped.out_of = out_of
         wrapped.at_least = at_least
-        wrapped.strategy = strategy
+        wrapped.threshold = threshold
         wrapped.results = []
         return wrapped
 
