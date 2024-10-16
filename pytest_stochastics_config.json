@@ -19,6 +19,24 @@
             ]
         },
         {
+            "plan": "disabled",
+            "_comment": "This is the default mode, if no threshold is set. no need to define it explicitly. just a demonstration.",
+            "threshold_tests": [
+                {
+                    "threshold": "disable",
+                    "tests": [
+                        "tests/test_func_tests.py::test_fail",
+                        "tests/test_func_tests.py::test_pass",
+                        "tests/test_func_tests.py::test_fixture_true",
+                        "tests/test_func_tests.py::test_pass_once_1",
+                        "tests/test_func_tests.py::test_fail_once_1",
+                        "tests/test_func_tests.py::test_pass_twice_23",
+                        "tests/test_func_tests.py::test_fail_twice_23"
+                    ]
+                }
+            ]
+        },
+        {
             "plan": "weak",
             "_comment": "This is a sample _weak_ mode. it allocates thresholds such that the tests will pass.",
             "threshold_tests": [

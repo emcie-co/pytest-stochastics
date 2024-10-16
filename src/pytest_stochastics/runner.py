@@ -108,7 +108,10 @@ class RunnerStochastics:
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_terminal_summary(self, terminalreporter: TerminalReporter) -> None:
-        if not self._real_failure and len(self._parent_lookup) > 0:
+        if len(self._parent_lookup) == 0:
+            return
+        
+        if not self._real_failure:
             terminalreporter.write("\n")
             terminalreporter.write("\033[92m!!! Testing finished successfully !!!\033[0m\n")
         else:
