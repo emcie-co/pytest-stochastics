@@ -18,7 +18,7 @@ pip install git+https://github.com/emcie-co/pytest-stochastics.git#egg=pytest_st
 Or if you're using Poetry:
 
 ```bash
-poetry add git+https://github.com/emcie-co/pytest-stochastics.git#egg=pytest_stochastics
+poetry add git+https://github.com/emcie-co/pytest-stochastics.git
 ```
 
 ## Usage
