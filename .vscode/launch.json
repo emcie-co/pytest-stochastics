@@ -2,13 +2,55 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: pytest",
+            "name": "Python: pytest [-]",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["-v"],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: pytest [default]",
             "type": "debugpy",
             "request": "launch",
             "module": "pytest",
             "args": [
                 "-v",
-                "-s",
+                "--branch=default"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: pytest [weak]",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "--branch=weak"
+            ],
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: pytest [strong]",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "--branch=strong"
             ],
             "cwd": "${workspaceFolder}",
             "env": {

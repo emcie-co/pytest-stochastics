@@ -2,16 +2,10 @@
 
 ## Test
 t: 
-    poetry run pytest -v
-
-## Test with out/err captured
-tc:
-    poetry run pytest -s -v
-
-## Collect but don't run
-tco:
-    poetry run pytest -s -v --co
-
+    poetry run pytest -v > /dev/null 2> /dev/null && echo "failed" || echo "passed"
+    poetry run pytest -v --branch=default > /dev/null 2> /dev/null && echo "failed" || echo "passed"
+    poetry run pytest -v --branch weak > /dev/null 2> /dev/null && echo "passed" || echo "failed"
+    poetry run pytest -v --branch "strong" > /dev/null 2> /dev/null && echo "failed" || echo "passed"
 
 # Git:
 

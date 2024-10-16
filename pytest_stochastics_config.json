@@ -1,38 +1,81 @@
 {
     "branch_tests": [
         {
-            "branch": "develop",
+            "branch": "default",
+            "_comment": "This is the default mode, if no strategy is set. no need to define it explicitly. just a demonstration.",
             "strategy_tests": [
                 {
-                    "strategy": "coinflip",
+                    "strategy": "default",
                     "tests": [
-                        "tests/test_tests.py::test_fail_once_1",
-                        "tests/test_tests.py::test_fail_twice_23"
-                    ]
-                },
-                {
-                    "strategy": "mostly",
-                    "tests": [
-                        "tests/test_tests.py::foo1"
+                        "tests/test_func_tests.py::test_fail",
+                        "tests/test_func_tests.py::test_pass",
+                        "tests/test_func_tests.py::test_fixture_true",
+                        "tests/test_func_tests.py::test_pass_once_1",
+                        "tests/test_func_tests.py::test_fail_once_1",
+                        "tests/test_func_tests.py::test_pass_twice_23",
+                        "tests/test_func_tests.py::test_fail_twice_23"
                     ]
                 }
             ]
         },
         {
-            "branch": "main",
+            "branch": "weak",
+            "_comment": "This is a sample _weak_ mode. it allocates strategies such that the tests will pass.",
             "strategy_tests": [
+                {
+                    "strategy": "disable",
+                    "tests": [
+                        "tests/test_func_tests.py::test_fail"
+                    ]
+                },
+                {
+                    "strategy": "coinflip",
+                    "tests": [
+                        "tests/test_func_tests.py::test_pass_once_1",
+                        "tests/test_func_tests.py::test_fail_twice_23"
+                    ]
+                },
                 {
                     "strategy": "mostly",
                     "tests": [
-                        "tests/test_tests.py::test_fail_once_1",
-                        "tests/test_tests.py::test_fail_twice_23",
-                        "tests/test_tests.py::foo2"
+                        "tests/test_func_tests.py::test_fixture_true",
+                        "tests/test_func_tests.py::test_fail_once_1",
+                        "tests/test_func_tests.py::test_pass_twice_23"
+                    ]
+                }
+            ]
+        },
+        {
+            "branch": "strong",
+            "_comment": "This is a sample _strong_ mode, it 'upgrades' all the weak strategies. expected to fail.",
+            "strategy_tests": [
+                {
+                    "strategy": "coinflip",
+                    "tests": [
+                        "tests/test_func_tests.py::test_fail"
+                    ]
+                },
+                {
+                    "strategy": "mostly",
+                    "tests": [
+                        "tests/test_func_tests.py::test_pass_once_1",
+                        "tests/test_func_tests.py::test_fail_twice_23"
                     ]
                 }
             ]
         }
     ],
     "strategies": [
+        {
+            "strategy": "disable",
+            "at_least": 0,
+            "out_of": 0
+        },
+        {
+            "strategy": "default",
+            "at_least": 1,
+            "out_of": 1
+        },
         {
             "strategy": "coinflip",
             "at_least": 1,
@@ -46,12 +89,8 @@
     ],
     "branch_fallbacks": [
         {
-            "branch": "main",
-            "overrides": "develop"
-        },
-        {
-            "branch": "master",
-            "overrides": "main"
+            "branch": "strong",
+            "overrides": "weak"
         }
     ]
 }

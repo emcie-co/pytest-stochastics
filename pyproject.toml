@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pytest-stochastics"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["MCNatsu <nathan@emcie.co>"]
 readme = "README.md"
@@ -9,8 +9,6 @@ packages = [{include = "pytest_stochastics", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.12"
 pytest = "^8.3.3"
-PyYAML = "^6.0.2"
-types-PyYAML = "^6.0.12.20240917"
 mypy = "^1.11.2"
 dataclasses-json = "^0.6.7"
 
