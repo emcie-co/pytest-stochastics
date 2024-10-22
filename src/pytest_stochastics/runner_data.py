@@ -49,12 +49,16 @@ class RunnerStochasticsConfig:
 type TestThreshold = dict[TestId, Threshold]
 
 
-def gen_fallback_lookup(config: RunnerStochasticsConfig, plan: PlanId) -> TestThreshold:
+def gen_fallback_lookup(runner_config: RunnerStochasticsConfig, plan: PlanId) -> TestThreshold:
+    """
+    Based on the provided `runner_config` and `plan`,
+    generates a lookup from test `nodeid` (`TestId`) to the `Threshold` resolved for that test.
+    """
     result: TestThreshold = {}
 
-    configured_plans = {bt.plan: bt.threshold_tests for bt in config.plan_tests}
-    fallback_plans = {fb.plan: fb.overrides for fb in config.plan_fallbacks}
-    thresholds = {st.threshold: st for st in config.thresholds}
+    configured_plans = {bt.plan: bt.threshold_tests for bt in runner_config.plan_tests}
+    fallback_plans = {fb.plan: fb.overrides for fb in runner_config.plan_fallbacks}
+    thresholds = {st.threshold: st for st in runner_config.thresholds}
 
     plan_priorities: list[PlanId] = []
     while True:
@@ -70,4 +74,5 @@ def gen_fallback_lookup(config: RunnerStochasticsConfig, plan: PlanId) -> TestTh
                 if test in result:
                     continue
                 result[test] = thresholds[threshold_tests.threshold]
+
     return result

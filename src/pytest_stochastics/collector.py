@@ -3,14 +3,13 @@ from typing import Any, Iterator, Self
 import pytest
 from _pytest.nodes import Node
 
+from pytest_stochastics.runner_data import Threshold
 
 class StochasticFunctionCollector(pytest.Collector):
     """Collector for stochastic tests."""
 
     obj: object
-    threshold: str
-    at_least: int
-    out_of: int
+    threshold: Threshold
     results: list[bool]
 
     @classmethod
@@ -19,23 +18,23 @@ class StochasticFunctionCollector(pytest.Collector):
 
         name = kwargs.pop("name")
         obj = kwargs.pop("obj")
-        threshold = kwargs.pop("threshold")
-        at_least = kwargs.pop("at_least")
-        out_of = kwargs.pop("out_of")
+        threshold = kwargs.pop("threshold")        
 
         wrapped = super().from_parent(parent, name=name, **kwargs)  # type: ignore
-        wrapped.obj = obj
-        wrapped.out_of = out_of
-        wrapped.at_least = at_least
+        wrapped.obj = obj        
         wrapped.threshold = threshold
         wrapped.results = []
         return wrapped
 
     def collect(self) -> Iterator[pytest.Item]:
-        for i in range(self.out_of):
-            func_name = f"{i+1:>02d} of {self.out_of:>02d}" if self.out_of > 1 else self.name
+        """Collect `out_of` copies of the function base of the strategy."""
+
+        for i in range(self.threshold.out_of):
+            func_name = f"{i+1:>02d} of {self.threshold.out_of:>02d}" if self.threshold.out_of > 1 else self.name
             yield StochasticFunction.from_parent(self, name=func_name, callobj=self.obj)  # type: ignore
 
 
 class StochasticFunction(pytest.Function):
+    """Marker that we wrap a `pytest.Function`."""
+
     pass

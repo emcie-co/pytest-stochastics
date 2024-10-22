@@ -18,7 +18,7 @@ pip install git+https://github.com/emcie-co/pytest-stochastics.git#egg=pytest_st
 Or if you're using Poetry:
 
 ```bash
-poetry add git+https://github.com/emcie-co/pytest-stochastics.git
+poetry add git+ssh://github.com/emcie-co/pytest-stochastics.git
 ```
 
 ## Usage
@@ -90,8 +90,8 @@ pytest
 ```
 > **You may override the default behaviour by defining a custom plan named `default`.**
 
-To specify a different plan:
+To specify a plan:
 
 ```bash
-pytest --plan another_plan
+pytest --plan="name of plan"
 ```
