@@ -57,6 +57,23 @@ class RunnerStochastics:
             out_of=out_of,
         )
 
+    @pytest.hookimpl(wrapper=True, trylast=True)
+    def pytest_sessionstart(self, session: pytest.Session) -> Generator[None, None, None]:
+        """Inject around session start to add some common-sense config prints."""
+
+        yield None
+        terminal_writer = session.config.get_terminal_writer()
+        terminal_writer.write("stochastics plan: ")
+        markup: dict[str, bool] = {}
+
+        if len(self.lookup_test_thresholds) == 0:
+            markup["red"] = True
+        else:
+            markup["green"] = True
+
+        terminal_writer.write(f"{self.plan}", **markup)
+        terminal_writer.line(f" [stochastic runs={len(self.lookup_test_thresholds)}]\n")
+
     @pytest.hookimpl(wrapper=True)
     def pytest_runtest_protocol(
         self, item: pytest.Item, nextitem: pytest.Item | None
