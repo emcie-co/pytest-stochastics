@@ -53,8 +53,6 @@ class RunnerStochastics:
             name=name,
             obj=obj,
             threshold=test_threshold,
-            at_least=at_least,
-            out_of=out_of,
         )
 
     @pytest.hookimpl(wrapper=True, trylast=True)
