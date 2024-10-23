@@ -49,7 +49,10 @@ class RunnerStochasticsConfig:
 type TestThreshold = dict[TestId, Threshold]
 
 
-def gen_fallback_lookup(runner_config: RunnerStochasticsConfig, plan: PlanId) -> TestThreshold:
+def gen_fallback_lookup(
+    runner_config: RunnerStochasticsConfig,
+    plan: PlanId,
+) -> TestThreshold:
     """
     Based on the provided `runner_config` and `plan`,
     generates a lookup from test `nodeid` (`TestId`) to the `Threshold` resolved for that test.

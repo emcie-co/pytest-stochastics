@@ -1,13 +1,14 @@
 import logging
 from logging import Logger
+from typing import cast
 
 import pytest
-from _pytest.config import Notset
 
 from pytest_stochastics.runner import RunnerStochastics
 from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig
 
 PYTEST_STOCHASTICS_CONFIG_PATH = "pytest_stochastics_config.json"
+DESIRED_RUNNER_NAME = "pytest_stochastics_runner"
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -16,7 +17,6 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         "--plan",
         action="store",
         dest="plan",
-        default=None,
         help="Specify the plan name to use for stochastic testing",
     )
     group.addoption(
@@ -31,22 +31,16 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     """Main entry point into the pytest plugin flow."""
 
-    DESIRED_RUNNER_NAME = "pytest_stochastics_runner"
-
-    requested_log_level = config.getoption("log_cli_level")
-    if not requested_log_level or isinstance(requested_log_level, Notset):
-        requested_log_level = "ERROR"
+    requested_log_level = cast(str, config.getoption("log_cli_level")) or "ERROR"
     logger = Logger(name=DESIRED_RUNNER_NAME, level=requested_log_level)
     logger.addHandler(logging.StreamHandler())
 
-    plan_name: str | Notset = config.getoption("plan")
-    if not plan_name or isinstance(plan_name, Notset):
-        plan_name = "default"
+    plan_name = cast(str, config.getoption("plan")) or "default"
     logger.info(f"Selected Stochastics Plan: {plan_name}")
 
-    config_file_path: str | Notset = config.getoption("plan_config_file")
-    if not config_file_path or isinstance(config_file_path, Notset):
-        config_file_path = PYTEST_STOCHASTICS_CONFIG_PATH
+    config_file_path = cast(str, config.getoption("plan_config_file"))
+    logger.info(f"Loading Stochastics Config from: {config_file_path}")
+
     try:
         runner_config = _load_config(config_file_path)
         logger.debug(f"Loaded runner_config: {runner_config}")

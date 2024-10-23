@@ -28,7 +28,11 @@ class StochasticFunctionCollector(pytest.Collector):
         super().__init__(name, parent, config, session, None, path, nodeid)
 
     @classmethod
-    def from_parent(cls, parent: Node, **kwargs: Any) -> Self:
+    def from_parent(
+        cls,
+        parent: Node,
+        **kwargs: Any,
+    ) -> Self:
         """Cooperative constructor which pytest likes, use this instead of `__init__`."""
 
         return super().from_parent(parent, **kwargs)  # type: ignore

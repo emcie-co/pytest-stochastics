@@ -1,5 +1,5 @@
 from logging import Logger
-from typing import Generator
+from typing import Generator, cast
 
 import pytest
 from _pytest.reports import TestReport
@@ -11,7 +11,12 @@ from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig, Test
 class RunnerStochastics:
     """Stochastics Plugin Runner. Handles the relevant hooks."""
 
-    def __init__(self, current_plan: str, runner_config: RunnerStochasticsConfig, logger: Logger) -> None:
+    def __init__(
+        self,
+        current_plan: str,
+        runner_config: RunnerStochasticsConfig,
+        logger: Logger,
+    ) -> None:
         self.plan = current_plan
         self.runner_config = runner_config
         self.logger = logger
@@ -19,16 +24,18 @@ class RunnerStochastics:
         self.lookup_test_thresholds = gen_fallback_lookup(runner_config, PlanId(current_plan))
 
         self._test_result_goals: dict[str, int] = {}
-        self._lookup_parent_nodeid: dict[str, str] = {}
-        self._failed_any_runs = False
+        self._stochastic_items: dict[str, pytest.Item] = {}
+        self._flag_any_non_stochastic_test_failed = False
 
     def pytest_pycollect_makeitem(
-        self, collector: pytest.Module | pytest.Class, name: str, obj: object
+        self,
+        collector: pytest.Module | pytest.Class,
+        name: str,
+        obj: object,
     ) -> None | pytest.Item | pytest.Collector | list[pytest.Item | pytest.Collector]:
         """Interecpt `Function`s at collection time and try to match them with a strategy."""
 
         if not name.startswith("test_"):
-            self.logger.debug(f"{name} is not a test - skipping.")
             return None
 
         nodeid = TestId(f"{collector.nodeid}::{name}")
@@ -38,14 +45,12 @@ class RunnerStochastics:
 
         test_threshold = self.lookup_test_thresholds[nodeid]
 
-        out_of = test_threshold.out_of
-        at_least = test_threshold.at_least
-        if out_of == 1 and at_least > 0:
+        if test_threshold.out_of == 1 and test_threshold.at_least > 0:
             self.logger.debug(f"Redundant threshold found for {name}, not wrapping")
             return None
 
         self.logger.info(
-            f"Wrapping stochastic function: `{name}` with threshold: `{test_threshold.threshold}`[{at_least}/{out_of}]"
+            f"Wrapping stochastic function: `{name}` with threshold: `{test_threshold.threshold}`[{test_threshold.at_least}/{test_threshold.out_of}]"
         )
 
         return StochasticFunctionCollector.from_parent(
@@ -56,7 +61,10 @@ class RunnerStochastics:
         )
 
     @pytest.hookimpl(wrapper=True, trylast=True)
-    def pytest_sessionstart(self, session: pytest.Session) -> Generator[None, None, None]:
+    def pytest_sessionstart(
+        self,
+        session: pytest.Session,
+    ) -> Generator[None, None, None]:
         """Inject around session start to add some common-sense config prints."""
 
         yield None
@@ -74,7 +82,9 @@ class RunnerStochastics:
 
     @pytest.hookimpl(wrapper=True)
     def pytest_runtest_protocol(
-        self, item: pytest.Item, nextitem: pytest.Item | None
+        self,
+        item: pytest.Item,
+        nextitem: pytest.Item | None,
     ) -> Generator[None, None, bool | None]:
         """Inject test groupings and summaries around the `pytest_runtest_protocol`."""
 
@@ -104,14 +114,18 @@ class RunnerStochastics:
             else:
                 outcome = f"{"\033[91m"}FAILED{"\033[0m"}"
                 comment += f", missing {penalty} passes"
-                self._failed_any_runs = True
+                self._flag_any_non_stochastic_test_failed = True
             print(
                 f"\n\r{"\033[94m"}StochasticSet:{"\033[0m"} {outcome} [{"\033[94m"}{comment}{"\033[0m"}]",
                 end="",
             )
         return None
 
-    def pytest_runtest_makereport(self, item: pytest.Item, call: pytest.CallInfo[None]) -> None:
+    def pytest_runtest_makereport(
+        self,
+        item: pytest.Item,
+        call: pytest.CallInfo[None],
+    ) -> None:
         """Called before each step's report is created."""
 
         if call.when == "call":
@@ -119,32 +133,34 @@ class RunnerStochastics:
                 return
 
             # before the actual test function is called, we store it with its parent nodeid.
-            self._lookup_parent_nodeid[item.nodeid] = item.parent.nodeid
+            self._stochastic_items[item.nodeid] = item
 
-    def pytest_runtest_logreport(self, report: TestReport) -> None:
+    def pytest_runtest_logreport(
+        self,
+        report: TestReport,
+    ) -> None:
         """Called after each step's test is run and a report has been generated."""
 
-        if report.nodeid not in self._lookup_parent_nodeid:
-            # if not a stochastic test, every test is a run.
-            self._failed_any_runs |= not report.passed
+        if report.nodeid not in self._stochastic_items:
+            self._flag_any_non_stochastic_test_failed |= not report.passed
             return
 
-        testid = self._lookup_parent_nodeid[report.nodeid]
+        testid = cast(pytest.Item, self._stochastic_items[report.nodeid].parent).nodeid
         if report.when == "call" and report.passed:
-            if testid not in self._test_result_goals:
-                return
-            # for stochastic runs we subtract 1 from the goal
             self._test_result_goals[testid] -= 1
 
-    def pytest_sessionfinish(self, session: pytest.Session, exitstatus: int) -> None:
-        if len(self._lookup_parent_nodeid) == 0:
-            # plugin was not used
-            return
-        if not exitstatus == pytest.ExitCode.TESTS_FAILED:
-            # some tests failed
+    def pytest_sessionfinish(
+        self,
+        session: pytest.Session,
+        exitstatus: int,
+    ) -> None:
+        if len(self._stochastic_items) == 0:
             return
 
-        if self._failed_any_runs:
+        if exitstatus != pytest.ExitCode.TESTS_FAILED:
+            return
+
+        if any(v > 0 for v in self._test_result_goals.values()) or self._flag_any_non_stochastic_test_failed:
             session.config.add_cleanup(
                 lambda: print(f"{"\033[91m"}!!! Some tests failed. Check the details above !!!{"\033[0m"}\n")
             )
