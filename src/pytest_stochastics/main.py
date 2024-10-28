@@ -1,13 +1,13 @@
 import logging
 from logging import Logger
-from typing import cast
+import rich
 
 import pytest
 
 from pytest_stochastics.runner import RunnerStochastics
 from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig
 
-PYTEST_STOCHASTICS_CONFIG_PATH = "pytest_stochastics_config.json"
+PYTEST_STOCHASTICS_CONFIG_PATH = "pytest_stochastics.json"
 DESIRED_RUNNER_NAME = "pytest_stochastics_runner"
 
 
@@ -31,14 +31,14 @@ def pytest_addoption(parser: pytest.Parser) -> None:
 def pytest_configure(config: pytest.Config) -> None:
     """Main entry point into the pytest plugin flow."""
 
-    requested_log_level = cast(str, config.getoption("log_cli_level")) or "ERROR"
+    requested_log_level = str(config.getoption("log_cli_level") or "ERROR")
     logger = Logger(name=DESIRED_RUNNER_NAME, level=requested_log_level)
     logger.addHandler(logging.StreamHandler())
 
-    plan_name = cast(str, config.getoption("plan")) or "default"
+    plan_name = str(config.getoption("plan") or "default")
     logger.info(f"Selected Stochastics Plan: {plan_name}")
 
-    config_file_path = cast(str, config.getoption("plan_config_file"))
+    config_file_path = str(config.getoption("plan_config_file"))
     logger.info(f"Loading Stochastics Config from: {config_file_path}")
 
     try:
@@ -47,8 +47,8 @@ def pytest_configure(config: pytest.Config) -> None:
     except Exception as ex:
         logger.error(f"Failed to load runner configuration: {ex}")
         config.add_cleanup(
-            lambda: print(
-                f"\n{"\033[91m"}Stochastic Runner not used, see error log above (look before test session starts) for details.{"\033[0m"}"
+            lambda: rich.print(
+                "\n[red]Stochastic Runner not used, see error log above (look before test session starts) for details.[/red]"
             )
         )
         return
@@ -62,8 +62,8 @@ def pytest_configure(config: pytest.Config) -> None:
     except Exception as ex:
         logger.error(f"Failed to register runner: {ex}")
         config.add_cleanup(
-            lambda: print(
-                f"\n{"\033[91m"}Stochastic Runner not registered, see error log above (look before test session starts) for details.{"\033[0m"}"
+            lambda: rich.print(
+                "\n[red]Stochastic Runner not registered, see error log above (look before test session starts) for details.[/red]"
             )
         )
 

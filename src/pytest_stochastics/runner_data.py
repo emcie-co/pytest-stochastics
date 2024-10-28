@@ -1,32 +1,43 @@
-from dataclasses import dataclass
-from typing import NewType
+from dataclasses import dataclass, field
+from typing import Any, Dict, NewType, TypeVar
 
-from dataclasses_json import dataclass_json
+from dataclasses_json import config, dataclass_json  # type: ignore
 
 # Type aliases for keys
-ThresholdId = NewType("ThresholdId", str)
+PolicyId = NewType("PolicyId", str)
 PlanId = NewType("PlanId", str)
 TestId = NewType("TestId", str)
+
+T = TypeVar("T", PolicyId, PlanId)
+
+
+def create_field_metadata(json_field_name: str, field_type: type[T]) -> Dict[str, Any]:
+    """Create metadata configuration for field with alternate names"""
+
+    def encoder(val: T) -> str:
+        return str(val)
+
+    return config(field_name=json_field_name, encoder=encoder)  # type: ignore
 
 
 @dataclass_json
 @dataclass(frozen=True)
-class ThresholdTests:
-    threshold: ThresholdId
+class PolicyTests:
+    name: PolicyId = field(metadata=create_field_metadata("policy", PolicyId))
     tests: list[TestId]
 
 
 @dataclass_json
 @dataclass(frozen=True)
-class PlanTests:
-    plan: PlanId
-    threshold_tests: list[ThresholdTests]
+class TestPlans:
+    name: PlanId = field(metadata=create_field_metadata("plan", PlanId))
+    policy_tests: list[PolicyTests]
 
 
 @dataclass_json
 @dataclass(frozen=True)
-class Threshold:
-    threshold: ThresholdId
+class Policy:
+    name: PolicyId = field(metadata=create_field_metadata("policy", PolicyId))
     at_least: int
     out_of: int
 
@@ -34,34 +45,34 @@ class Threshold:
 @dataclass_json
 @dataclass(frozen=True)
 class PlanFallback:
-    plan: PlanId
+    name: PlanId = field(metadata=create_field_metadata("plan", PlanId))
     overrides: PlanId
 
 
 @dataclass_json
 @dataclass(frozen=True)
 class RunnerStochasticsConfig:
-    plan_tests: list[PlanTests]
-    thresholds: list[Threshold]
-    plan_fallbacks: list[PlanFallback]
+    test_plan_list: list[TestPlans] = field(default_factory=list)
+    policy_list: list[Policy] = field(default_factory=list)
+    plan_fallback_list: list[PlanFallback] = field(default_factory=list)
 
 
-type TestThreshold = dict[TestId, Threshold]
+TestPolicy = dict[TestId, Policy]
 
 
 def gen_fallback_lookup(
     runner_config: RunnerStochasticsConfig,
     plan: PlanId,
-) -> TestThreshold:
+) -> TestPolicy:
     """
     Based on the provided `runner_config` and `plan`,
-    generates a lookup from test `nodeid` (`TestId`) to the `Threshold` resolved for that test.
+    generates a lookup from test `nodeid` (`TestId`) to the `Policy` resolved for that test.
     """
-    result: TestThreshold = {}
+    result: TestPolicy = {}
 
-    configured_plans = {bt.plan: bt.threshold_tests for bt in runner_config.plan_tests}
-    fallback_plans = {fb.plan: fb.overrides for fb in runner_config.plan_fallbacks}
-    thresholds = {st.threshold: st for st in runner_config.thresholds}
+    configured_plans = {bt.name: bt.policy_tests for bt in runner_config.test_plan_list}
+    fallback_plans = {fb.name: fb.overrides for fb in runner_config.plan_fallback_list}
+    policies = {st.name: st for st in runner_config.policy_list}
 
     plan_priorities: list[PlanId] = []
     while True:
@@ -72,10 +83,10 @@ def gen_fallback_lookup(
         plan = fallback_plans[plan]
 
     for plan in plan_priorities:
-        for threshold_tests in configured_plans[plan]:
-            for test in threshold_tests.tests:
+        for policy_tests in configured_plans[plan]:
+            for test in policy_tests.tests:
                 if test in result:
                     continue
-                result[test] = thresholds[threshold_tests.threshold]
+                result[test] = policies[policy_tests.name]
 
     return result

@@ -1,8 +1,10 @@
 from logging import Logger
 from typing import Generator, cast
 
+# from rich.logging import log
 import pytest
 from _pytest.reports import TestReport
+import rich
 
 from pytest_stochastics.collector import StochasticFunctionCollector
 from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig, TestId, gen_fallback_lookup
@@ -19,9 +21,9 @@ class RunnerStochastics:
     ) -> None:
         self.plan = current_plan
         self.runner_config = runner_config
-        self.logger = logger
+        self._logger = logger
 
-        self.lookup_test_thresholds = gen_fallback_lookup(runner_config, PlanId(current_plan))
+        self.lookup_test_policies = gen_fallback_lookup(runner_config, PlanId(current_plan))
 
         self._test_result_goals: dict[str, int] = {}
         self._stochastic_items: dict[str, pytest.Item] = {}
@@ -39,25 +41,26 @@ class RunnerStochastics:
             return None
 
         nodeid = TestId(f"{collector.nodeid}::{name}")
-        if nodeid not in self.lookup_test_thresholds:
-            self.logger.debug(f"No threshold found for {name}, not wrapping.")
+
+        if nodeid not in self.lookup_test_policies:
+            self._logger.debug(f"No policy found for {name}, not wrapping.")
             return None
 
-        test_threshold = self.lookup_test_thresholds[nodeid]
+        test_policy = self.lookup_test_policies[nodeid]
 
-        if test_threshold.out_of == 1 and test_threshold.at_least > 0:
-            self.logger.debug(f"Redundant threshold found for {name}, not wrapping")
+        if test_policy.out_of == 1 and test_policy.at_least > 0:
+            self._logger.debug(f"Redundant policy found for {name}, not wrapping")
             return None
 
-        self.logger.info(
-            f"Wrapping stochastic function: `{name}` with threshold: `{test_threshold.threshold}`[{test_threshold.at_least}/{test_threshold.out_of}]"
+        self._logger.info(
+            f"Wrapping stochastic function: `{name}` with policy: `{test_policy.name}`[{test_policy.at_least}/{test_policy.out_of}]"
         )
 
         return StochasticFunctionCollector.from_parent(
             collector,
             name=name,
             obj=obj,
-            threshold=test_threshold,
+            policy=test_policy,
         )
 
     @pytest.hookimpl(wrapper=True, trylast=True)
@@ -68,17 +71,18 @@ class RunnerStochastics:
         """Inject around session start to add some common-sense config prints."""
 
         yield None
+
         terminal_writer = session.config.get_terminal_writer()
         terminal_writer.write("stochastics plan: ")
         markup: dict[str, bool] = {}
 
-        if len(self.lookup_test_thresholds) == 0:
+        if len(self.lookup_test_policies) == 0:
             markup["red"] = True
         else:
             markup["green"] = True
 
         terminal_writer.write(f"{self.plan}", **markup)
-        terminal_writer.line(f" [stochastic runs={len(self.lookup_test_thresholds)}]\n")
+        terminal_writer.line(f" [stochastic runs={len(self.lookup_test_policies)}]\n")
 
     @pytest.hookimpl(wrapper=True)
     def pytest_runtest_protocol(
@@ -93,12 +97,12 @@ class RunnerStochastics:
             return None
 
         key = item.parent.nodeid
-        threshold = item.parent.threshold
+        policy = item.parent.policy
         if key not in self._test_result_goals:
             # Starting a new stochastics run
-            self._test_result_goals[key] = threshold.at_least
-            print(
-                f"\n\r{"\033[94m"}StochasticSet:{"\033[0m"} {key} [{"\033[94m"}{threshold.threshold}: {threshold.at_least}/{threshold.out_of}{"\033[0m"}]",
+            self._test_result_goals[key] = policy.at_least
+            rich.print(
+                f"\n\r[blue]StochasticSet:[/blue] {key} [[blue]{policy.name}: {policy.at_least}/{policy.out_of}[/blue]]",
                 end="",
             )
 
@@ -108,15 +112,16 @@ class RunnerStochastics:
         if nextitem is None or item.parent != nextitem.parent:
             # if we're the last item of this stochastics run
             penalty = self._test_result_goals[key]
-            comment = f"{threshold.at_least - penalty} passed out of {threshold.out_of}"
+            comment = f"[yellow]{policy.out_of - (policy.at_least - penalty)} fail(s)[/yellow]"
             if penalty <= 0:
-                outcome = f"{"\033[92m"}PASSED{"\033[0m"}"
+                outcome = "[green]PASSED[/green]"
+                comment+= f", [green]{policy.at_least - penalty} pass(es)[/green]"
             else:
-                outcome = f"{"\033[91m"}FAILED{"\033[0m"}"
-                comment += f", missing {penalty} passes"
+                outcome = "[red]FAILED[/red]"
+                comment += f", [red]missing {penalty} pass(es)[/red]"
                 self._flag_any_non_stochastic_test_failed = True
-            print(
-                f"\n\r{"\033[94m"}StochasticSet:{"\033[0m"} {outcome} [{"\033[94m"}{comment}{"\033[0m"}]",
+            rich.print(
+                f"\n\r[blue]StochasticSet:[/blue] {outcome} [{comment}]",
                 end="",
             )
         return None
@@ -162,13 +167,13 @@ class RunnerStochastics:
 
         if any(v > 0 for v in self._test_result_goals.values()) or self._flag_any_non_stochastic_test_failed:
             session.config.add_cleanup(
-                lambda: print(f"{"\033[91m"}!!! Some tests failed. Check the details above !!!{"\033[0m"}\n")
+                lambda: rich.print("\n\r[red]Some tests failed.[/red][blue] Check the details above...[/blue]\n")
             )
             return
 
         session.exitstatus = pytest.ExitCode.OK  # rectify the exit code
         session.config.add_cleanup(
-            lambda: print(
-                f"{"\033[92m"}!!! Testing finished successfully. Stochastic tests failed within acceptable margins. !!!{"\033[0m"}\n"
+            lambda: rich.print(
+                "\n\r[green]Testing finished successfully.[/green][blue] Some stochastic tests failed[/blue][green] within acceptable margins.[/green]\n"
             )
         )

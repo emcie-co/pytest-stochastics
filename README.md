@@ -1,6 +1,8 @@
 # pytest-stochastics
 
-A pytest plugin for running stochastic tests with configurable thresholds.
+A pytest plugin for running stochastic tests with configurable policies.
+
+> Definition: Stochastic Test - A test that may occasionally fail due to the non-deterministic character of the test subject. Evaluated by an `at_least` of out `out_of` model.
 
 ## Features
 
@@ -13,12 +15,16 @@ You can install pytest-stochastics using pip:
 
 ```bash
 pip install git+https://github.com/emcie-co/pytest-stochastics.git#egg=pytest_stochastics
+# or
+pip install git+ssh://git@github.com/emcie-co/pytest-stochastics.git#egg=pytest_stochastics
 ```
 
 Or if you're using Poetry:
 
 ```bash
-poetry add git+ssh://github.com/emcie-co/pytest-stochastics.git
+poetry add git+https://github.com/emcie-co/pytest-stochastics.git
+# or
+poetry add git+ssh://git@github.com/emcie-co/pytest-stochastics.git
 ```
 
 ## Usage
@@ -29,18 +35,18 @@ Create a `pytest_stochastics_config.json` file in your project root with your te
 
 ```json
 {
-    "plan_tests": [
+    "test_plans": [
         {
             "plan": "weak",
-            "threshold_tests": [
+            "policy_tests": [
                 {
-                    "threshold": "always",
+                    "policy": "always",
                     "tests": [
                         "tests/test_abc/test_1", 
                     ]
                 },
                 {
-                    "threshold": "mostly",
+                    "policy": "mostly",
                     "tests": [
                         "tests/test_abc/test_2",
                         "tests/test_abc/test_3"
@@ -50,9 +56,9 @@ Create a `pytest_stochastics_config.json` file in your project root with your te
         },
         {
             "plan": "strong",
-            "threshold_tests": [
+            "policy_tests": [
                 {
-                    "threshold": "always",
+                    "policy": "always",
                     "tests": [
                         "tests/test_abc/test_2"
                     ]
@@ -60,14 +66,14 @@ Create a `pytest_stochastics_config.json` file in your project root with your te
             ]
         }
     ],
-    "thresholds": [
+    "policies": [
         {
-            "threshold": "always",
+            "policy": "always",
             "at_least": 3,
             "out_of": 3
         },
         {
-            "threshold": "mostly",
+            "policy": "mostly",
             "at_least": 2,
             "out_of": 3
         }
