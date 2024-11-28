@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Any, Iterator, Self
+from typing import Any, Iterator
+from typing_extensions import Self
 
 import pytest
 from _pytest.nodes import Node
