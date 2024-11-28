@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{ include = "pytest_stochastics", from = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = ">=3.10,<3.11"
 pytest = "^8.0.0"
 mypy = "^1.11.1"
 dataclasses-json = "^0.6.7"
