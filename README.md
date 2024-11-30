@@ -14,7 +14,7 @@ A pytest plugin for running stochastic tests with configurable policies.
 You can install pytest-stochastics using pip:
 
 ```bash
-pip install pytest_stochastics
+pip install pytest-stochastics
 ```
 
 ## Usage
