@@ -14,24 +14,14 @@ A pytest plugin for running stochastic tests with configurable policies.
 You can install pytest-stochastics using pip:
 
 ```bash
-pip install git+https://github.com/emcie-co/pytest-stochastics.git#egg=pytest_stochastics
-# or
-pip install git+ssh://git@github.com/emcie-co/pytest-stochastics.git#egg=pytest_stochastics
-```
-
-Or if you're using Poetry:
-
-```bash
-poetry add git+https://github.com/emcie-co/pytest-stochastics.git
-# or
-poetry add git+ssh://git@github.com/emcie-co/pytest-stochastics.git
+pip install pytest_stochastics
 ```
 
 ## Usage
 
 ### Configuration
 
-Create a `pytest_stochastics_config.json` file in your project root with your test configuration:
+Create a `pytest_stochastics.json` file in your project root with your test configuration:
 
 ```json
 {
