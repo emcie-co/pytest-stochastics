@@ -1,13 +1,13 @@
 [tool.poetry]
 name = "pytest-stochastics"
-version = "0.4.2"
+version = "0.4.3"
 description = "pytest plugin that allows selectively running tests several times and accepting *some* failures."
 authors = ["MCNatsu <nathan@emcie.co>"]
 readme = "README.md"
 packages = [{ include = "pytest_stochastics", from = "src" }]
 
 [tool.poetry.dependencies]
-python = ">=3.10"
+python = "^3.10"
 pytest = "^8.0.0"
 mypy = "^1.11.1"
 dataclasses-json = "^0.6.7"
