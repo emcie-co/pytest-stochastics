@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "pytest-stochastics"
-version = "0.3.1"
+version = "0.4.0"
 description = "pytest plugin that allows selectively running tests several times and accepting *some* failures."
 authors = ["MCNatsu <nathan@emcie.co>"]
 readme = "README.md"
