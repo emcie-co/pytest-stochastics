@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Any, Iterator, Self
+from typing import Any, Iterator
+from typing_extensions import Self
 
 import pytest
 from _pytest.nodes import Node
@@ -41,7 +42,9 @@ class StochasticFunctionCollector(pytest.Collector):
         """Collect `out_of` copies of the function base of the strategy."""
 
         for i in range(self.policy.out_of):
-            func_name = f"{i+1:>02d} of {self.policy.out_of:>02d}" if self.policy.out_of > 1 else self.name
+            func_name = (
+                f"{i+1:>02d} of {self.policy.out_of:>02d}" if self.policy.out_of > 1 else self.name
+            )
             yield StochasticFunction.from_parent(self, name=func_name, callobj=self.obj)  # type: ignore
 
 
