@@ -1,13 +1,35 @@
 from logging import Logger
-from typing import Generator, cast
-
-# from rich.logging import log
-import pytest
-from _pytest.reports import TestReport
 import rich
+from typing import Sequence
 
-from pytest_stochastics.collector import StochasticFunctionCollector
-from pytest_stochastics.runner_data import PlanId, RunnerStochasticsConfig, TestId, gen_fallback_lookup
+
+import pytest
+from _pytest.python import pytest_pycollect_makeitem
+from _pytest.runner import runtestprotocol
+
+from pytest_stochastics.runner_data import (
+    PlanId,
+    Policy,
+    RunnerStochasticsConfig,
+    TestId,
+    gen_fallback_lookup,
+)
+
+ItemOrCollector = pytest.Item | pytest.Collector
+
+
+def annotate(
+    item: ItemOrCollector,
+    policy: Policy,
+    attempt: int,
+    logger: Logger,
+) -> ItemOrCollector:
+    item.originalname = item.name  # type: ignore
+    attempt_id = f"[::{policy.name}#{attempt+1:02d}_of_{policy.out_of:02d}]"
+    item.name += attempt_id
+    item._nodeid += attempt_id  # type: ignore
+
+    return item
 
 
 class RunnerStochastics:
@@ -24,150 +46,147 @@ class RunnerStochastics:
         self._logger = logger
 
         self.lookup_test_policies = gen_fallback_lookup(runner_config, PlanId(current_plan))
-
-        self._test_result_goals: dict[str, int] = {}
-        self._stochastic_items: dict[str, pytest.Item] = {}
-        self._flag_any_non_stochastic_test_failed = False
+        self._test_result: dict[str, list[bool]] = {}
+        self._set_results: dict[str, bool] = {}
+        self._did_space = False
 
     def pytest_pycollect_makeitem(
         self,
         collector: pytest.Module | pytest.Class,
         name: str,
         obj: object,
-    ) -> None | pytest.Item | pytest.Collector | list[pytest.Item | pytest.Collector]:
-        """Interecpt `Function`s at collection time and try to match them with a strategy."""
-
+    ) -> None | ItemOrCollector | list[ItemOrCollector]:
         if not name.startswith("test_"):
             return None
 
         nodeid = TestId(f"{collector.nodeid}::{name}")
-
         if nodeid not in self.lookup_test_policies:
             self._logger.debug(f"No policy found for {name}, not wrapping.")
             return None
 
-        test_policy = self.lookup_test_policies[nodeid]
-
-        if test_policy.out_of == 1 and test_policy.at_least > 0:
+        policy = self.lookup_test_policies[nodeid]
+        if policy.out_of == 1 and policy.at_least > 0:
             self._logger.debug(f"Redundant policy found for {name}, not wrapping")
             return None
 
+        if policy.out_of <= 0:
+            self._logger.debug(f"Test `{name}` disabled by configuration")
+            return []
+
         self._logger.info(
-            f"Wrapping stochastic function: `{name}` with policy: `{test_policy.name}`[{test_policy.at_least}/{test_policy.out_of}]"
+            f"Wrapping stochastic function: `{name}` with policy: `{policy.name}`[{policy.at_least}/{policy.out_of}]"
         )
 
-        return StochasticFunctionCollector.from_parent(
-            collector,
-            name=name,
-            obj=obj,
-            policy=test_policy,
-        )
+        generated: list[ItemOrCollector] = []
+        transpose: list[Sequence[ItemOrCollector]] = []
+        for i in range(policy.out_of):
+            items: None | ItemOrCollector | list[ItemOrCollector] = pytest_pycollect_makeitem(
+                collector,
+                name=name,
+                obj=obj,
+            )
+            if not items:
+                continue
 
-    @pytest.hookimpl(wrapper=True, trylast=True)
-    def pytest_sessionstart(
-        self,
-        session: pytest.Session,
-    ) -> Generator[None, None, None]:
-        """Inject around session start to add some common-sense config prints."""
+            if not isinstance(items, list):
+                generated.append(annotate(items, policy, i, self._logger))
+                continue
 
-        yield None
+            for item in items:
+                self.lookup_test_policies[TestId(item.nodeid)] = policy
+                self._test_result[item.nodeid] = []
 
-        terminal_writer = session.config.get_terminal_writer()
-        terminal_writer.write("stochastics plan: ")
-        markup: dict[str, bool] = {}
+            transpose.append(
+                list(
+                    map(
+                        lambda item: annotate(item, policy, i, self._logger),
+                        items,
+                    )
+                )
+            )
 
-        if len(self.lookup_test_policies) == 0:
-            markup["red"] = True
-        else:
-            markup["green"] = True
+        if transpose:
+            generated = list(
+                sum(map(list, zip(*transpose)), generated),
+            )
 
-        terminal_writer.write(f"{self.plan}", **markup)
-        terminal_writer.line(f" [stochastic runs={len(self.lookup_test_policies)}]\n")
+        return generated
 
-    @pytest.hookimpl(wrapper=True)
     def pytest_runtest_protocol(
         self,
         item: pytest.Item,
         nextitem: pytest.Item | None,
-    ) -> Generator[None, None, bool | None]:
-        """Inject test groupings and summaries around the `pytest_runtest_protocol`."""
+    ) -> bool | None:
+        item_test_id = TestId(item.nodeid.split("[::")[0])
+        if item_test_id not in self._test_result:
+            if item_test_id not in self._set_results:
+                self._did_space = False
+                return None
+            return self._set_results[item_test_id]
 
-        if not isinstance(item.parent, StochasticFunctionCollector):
-            yield None
-            return None
+        policy = self.lookup_test_policies[item_test_id]
 
-        key = item.parent.nodeid
-        policy = item.parent.policy
-        if key not in self._test_result_goals:
-            # Starting a new stochastics run
-            self._test_result_goals[key] = policy.at_least
+        if len(self._test_result[item_test_id]) == 0:
+            prefix = "\n\r" if self._did_space else "\n\r\n\r"
             rich.print(
-                f"\n\r[blue]StochasticSet:[/blue] {key} [[blue]{policy.name}: {policy.at_least}/{policy.out_of}[/blue]]",
+                f"{prefix}[blue]Stochastic Set:[/blue] {item_test_id} "
+                f"[[blue]{policy.name}: {policy.at_least}/{policy.out_of}[/blue]]",
                 end="",
             )
 
-        # skip to the end of the protocol
-        yield None
+        reports = runtestprotocol(item, nextitem=nextitem)
+        test_passed = all(r.passed for r in reports)
+        self._test_result[item_test_id].append(test_passed)
 
-        if nextitem is None or item.parent != nextitem.parent:
-            # if we're the last item of this stochastics run
-            penalty = self._test_result_goals[key]
-            comment = f"[yellow]{policy.out_of - (policy.at_least - penalty)} fail(s)[/yellow]"
-            if penalty <= 0:
-                outcome = "[green]PASSED[/green]"
-                comment+= f", [green]{policy.at_least - penalty} pass(es)[/green]"
-            else:
-                outcome = "[red]FAILED[/red]"
-                comment += f", [red]missing {penalty} pass(es)[/red]"
-                self._flag_any_non_stochastic_test_failed = True
-            rich.print(
-                f"\n\r[blue]StochasticSet:[/blue] {outcome} [{comment}]",
-                end="",
-            )
-        return None
+        outcome: str = ""
 
-    def pytest_runtest_makereport(
-        self,
-        item: pytest.Item,
-        call: pytest.CallInfo[None],
-    ) -> None:
-        """Called before each step's report is created."""
+        results_so_far = self._test_result[item_test_id]
+        passes_so_far = results_so_far.count(True)
+        if policy.pass_fast and passes_so_far >= policy.at_least:
+            # report.outcome = "passed"
+            # report.longrepr = f"Stochastic test passed with {passes_so_far} successes"
+            outcome = "[green]PASSED[/green]"
 
-        if call.when == "call":
-            if not isinstance(item.parent, StochasticFunctionCollector):
-                return
+        policy_allowed_fails = policy.out_of - policy.at_least
+        fails_so_far = results_so_far.count(False)
+        if not outcome and (
+            len(self._test_result[item_test_id]) == policy.out_of
+            or (policy.fail_fast and fails_so_far > policy_allowed_fails)
+        ):
+            # report.outcome = "failed"
+            # report.longrepr = f"Stochastic test failed with {fails_so_far} failures"
+            outcome = "[red]FAILED[/red]"
 
-            # before the actual test function is called, we store it with its parent nodeid.
-            self._stochastic_items[item.nodeid] = item
+        if outcome:
+            comment = f"[green]{passes_so_far} pass(es) [/green][red]{fails_so_far} fail(s) [/red]"
 
-    def pytest_runtest_logreport(
-        self,
-        report: TestReport,
-    ) -> None:
-        """Called after each step's test is run and a report has been generated."""
+            rich.print(f"\n\r[blue]Stochastic Result:[/blue] {outcome} [{comment}]", end="\n\r")
+            self._did_space = True
+            self._test_result.pop(item_test_id)
+            test_passed = "FAILED" not in outcome
+            self._set_results[item_test_id] = test_passed
+            return test_passed
 
-        if report.nodeid not in self._stochastic_items:
-            self._flag_any_non_stochastic_test_failed |= not report.passed
-            return
+        # item.ihook.pytest_runtest_logreport(report=reports[1])
 
-        testid = cast(pytest.Item, self._stochastic_items[report.nodeid].parent).nodeid
-        if report.when == "call" and report.passed:
-            self._test_result_goals[testid] -= 1
+        return True
 
     def pytest_sessionfinish(
         self,
         session: pytest.Session,
         exitstatus: int,
     ) -> None:
-        if len(self._stochastic_items) == 0:
+        if len(self._test_result) + len(self._set_results) == 0:
             return
 
         if exitstatus != pytest.ExitCode.TESTS_FAILED:
             return
 
-        if any(v > 0 for v in self._test_result_goals.values()) or self._flag_any_non_stochastic_test_failed:
+        if not all(v for v in self._set_results.values()):
             session.config.add_cleanup(
-                lambda: rich.print("\n\r[red]Some tests failed.[/red][blue] Check the details above...[/blue]\n")
+                lambda: rich.print(
+                    "\n\r[red]Some tests failed.[/red][blue] Check the details above...[/blue]\n"
+                )
             )
             return
 

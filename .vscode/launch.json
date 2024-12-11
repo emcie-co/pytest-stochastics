@@ -19,7 +19,7 @@
             "request": "launch",
             "module": "pytest",
             "args": [
-                "-v",
+                "-vvv",
                 "--log-cli-level=DEBUG",
                 "--plan=disabled"
             ],
@@ -35,7 +35,7 @@
             "request": "launch",
             "module": "pytest",
             "args": [
-                "-v",
+                "-vvv",
                 "--log-cli-level=DEBUG",
                 "--plan=default"
             ],
@@ -51,7 +51,7 @@
             "request": "launch",
             "module": "pytest",
             "args": [
-                "-v",
+                "-vvv",
                 "--log-cli-level=DEBUG",
                 "--plan=weak"
             ],
@@ -67,7 +67,7 @@
             "request": "launch",
             "module": "pytest",
             "args": [
-                "-v",
+                "-vvv",
                 "--log-cli-level=DEBUG",
                 "--plan=strong"
             ],

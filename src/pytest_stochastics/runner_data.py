@@ -40,7 +40,8 @@ class Policy:
     name: PolicyId = field(metadata=create_field_metadata("policy", PolicyId))
     at_least: int
     out_of: int
-
+    fail_fast: bool = True
+    pass_fast: bool = True
 
 @dataclass_json
 @dataclass(frozen=True)

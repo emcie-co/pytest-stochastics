@@ -9,6 +9,7 @@
                     "tests": [
                         "tests/test_func_tests.py::test_fail",
                         "tests/test_func_tests.py::test_pass",
+                        "tests/test_func_tests.py::test_marked_pass_once_2",
                         "tests/test_func_tests.py::test_fixture_true",
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_once_1",
@@ -27,6 +28,7 @@
                     "tests": [
                         "tests/test_func_tests.py::test_fail",
                         "tests/test_func_tests.py::test_pass",
+                        "tests/test_func_tests.py::test_marked_pass_once_2",
                         "tests/test_func_tests.py::test_fixture_true",
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_once_1",
@@ -43,7 +45,15 @@
                 {
                     "name": "disable",
                     "tests": [
+                        "tests/test_func_tests.py::test_marked_pass_once_2",
                         "tests/test_func_tests.py::test_fail"
+
+                    ]
+                },
+                {
+                    "name": "default",
+                    "tests": [
+                        "tests/test_func_tests.py::test_pass"
                     ]
                 },
                 {
@@ -76,6 +86,7 @@
                 {
                     "policy": "mostly",
                     "tests": [
+                        "tests/test_func_tests.py::test_marked_pass_once_2",
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_twice_23"
                     ]
