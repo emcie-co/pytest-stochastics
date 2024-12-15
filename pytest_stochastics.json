@@ -1,37 +1,24 @@
 {
     "test_plan_list": [
         {
+            "name": "disabled",
+            "policy_tests": [
+                {
+                    "policy": "disable",
+                    "tests": [
+                        "tests/test_func_tests.py"
+                    ]
+                }
+            ]
+        },
+        {
             "plan": "default",
             "_comment": "This is the default mode, if no policy is set. no need to define it explicitly. just a demonstration.",
             "policy_tests": [
                 {
                     "policy": "default",
                     "tests": [
-                        "tests/test_func_tests.py::test_fail",
-                        "tests/test_func_tests.py::test_pass",
-                        "tests/test_func_tests.py::test_fixture_true",
-                        "tests/test_func_tests.py::test_pass_once_1",
-                        "tests/test_func_tests.py::test_fail_once_1",
-                        "tests/test_func_tests.py::test_pass_twice_23",
-                        "tests/test_func_tests.py::test_fail_twice_23"
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "disabled",
-            "_comment": "This is the default mode, if no policy is set. no need to define it explicitly. just a demonstration.",
-            "policy_tests": [
-                {
-                    "policy": "disable",
-                    "tests": [
-                        "tests/test_func_tests.py::test_fail",
-                        "tests/test_func_tests.py::test_pass",
-                        "tests/test_func_tests.py::test_fixture_true",
-                        "tests/test_func_tests.py::test_pass_once_1",
-                        "tests/test_func_tests.py::test_fail_once_1",
-                        "tests/test_func_tests.py::test_pass_twice_23",
-                        "tests/test_func_tests.py::test_fail_twice_23"
+                        "tests/test_func_tests.py::test_(?!fail$)"
                     ]
                 }
             ]
@@ -41,14 +28,15 @@
             "_comment": "This is a sample _weak_ mode. it allocates policies such that the tests will pass.",
             "policy_tests": [
                 {
-                    "name": "disable",
+                    "policy": "disable",
                     "tests": [
-                        "tests/test_func_tests.py::test_fail"
+                        "tests/test_func_tests.py::test_marked_pass_once_2\\[1\\]"
                     ]
                 },
                 {
                     "policy": "coinflip",
                     "tests": [
+                        "tests/test_func_tests.py::test_marked_pass_once_2",
                         "tests/test_func_tests.py::test_pass_once_1",
                         "tests/test_func_tests.py::test_fail_twice_23"
                     ]
@@ -70,7 +58,8 @@
                 {
                     "policy": "coinflip",
                     "tests": [
-                        "tests/test_func_tests.py::test_fail"
+                        "tests/test_func_tests.py::test_fail",
+                        "tests/test_func_tests.py::test_marked_pass_once_2"
                     ]
                 },
                 {
@@ -109,6 +98,10 @@
         {
             "name": "strong",
             "overrides": "weak"
+        },
+        {
+            "name": "weak",
+            "overrides": "default"
         },
         {
             "plan": "default",

@@ -1,0 +1,8 @@
+{
+    "python.testing.pytestArgs": [
+        "-vvv",
+        "--plan=weak",
+        "--log-cli-level=DEBUG"
+    ],
+    "python.testing.pytestEnabled": true
+}

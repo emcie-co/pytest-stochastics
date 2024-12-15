@@ -14,9 +14,17 @@ def test_fail() -> None:
     assert False
 
 
-def test_pass() -> None:
+@pytest.mark.parametrize("true", (True, True))
+def test_pass(true: bool) -> None:
     """Test that always passes."""
-    pass
+    assert true
+
+
+@pytest.mark.parametrize("foo", (1, 2))
+def test_marked_pass_once_2(foo: int) -> None:
+    """Test that passes only the 2nd time it's run (fails all consecutive)."""
+
+    assert foo == 2
 
 
 def test_fixture_true(foofix: bool) -> None:

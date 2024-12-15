@@ -55,7 +55,9 @@ def pytest_configure(config: pytest.Config) -> None:
 
     try:
         runner_selector = RunnerStochastics(PlanId(plan_name), runner_config, logger)
-        confirmed_name = config.pluginmanager.register(runner_selector, DESIRED_RUNNER_NAME)
+        confirmed_name = config.pluginmanager.register(
+            runner_selector, DESIRED_RUNNER_NAME
+        )
         if confirmed_name is None or confirmed_name != DESIRED_RUNNER_NAME:
             raise Exception(f"Failed to register `{DESIRED_RUNNER_NAME}` plugin!")
         logger.debug(f"Confirmed runner name: {confirmed_name}")
@@ -71,4 +73,4 @@ def pytest_configure(config: pytest.Config) -> None:
 def _load_config(stochastics_config_path: str) -> RunnerStochasticsConfig:
     with open(stochastics_config_path) as config_file:
         raw_json = config_file.read()
-        return RunnerStochasticsConfig.from_json(raw_json)  # type: ignore #TODO?
+        return RunnerStochasticsConfig.from_json(raw_json)  # type: ignore
