@@ -1,6 +1,6 @@
 from logging import Logger
 import rich
-from typing import Sequence
+from collections.abc import Sequence
 
 import pytest
 from _pytest.python import pytest_pycollect_makeitem, CallSpec2
@@ -22,6 +22,8 @@ def annotate_stochastic_child(
     policy: Policy,
     attempt: int,
 ) -> ItemOrCollector:
+    """Helper function to make the item a child of a virtual parent"""
+
     item.originalname = item.name  # type: ignore
     attempt_id = f"[::{policy.name}#{attempt+1:02d}_of_{policy.out_of:02d}]"
     item.name += attempt_id
@@ -55,6 +57,11 @@ class RunnerStochastics:
         name: str,
         obj: object,
     ) -> None | ItemOrCollector | list[ItemOrCollector]:
+        """
+        Hook. Called during the collection phase.
+
+        Any test that matches an existing policy (uner the current plan) gets annotated if it requires a virtual parent.
+        """
         if not name.startswith("test_"):
             return None
 
@@ -80,12 +87,10 @@ class RunnerStochastics:
         generated: list[ItemOrCollector] = []
         transpose: list[Sequence[ItemOrCollector]] = []
         for i in range(policy.out_of):
-            items: None | ItemOrCollector | list[ItemOrCollector] = (
-                pytest_pycollect_makeitem(
-                    collector,
-                    name=name,
-                    obj=obj,
-                )
+            items: None | ItemOrCollector | list[ItemOrCollector] = pytest_pycollect_makeitem(
+                collector,
+                name=name,
+                obj=obj,
             )
             if not items:
                 continue
@@ -118,6 +123,12 @@ class RunnerStochastics:
         item: pytest.Item,
         nextitem: pytest.Item | None,
     ) -> bool | None:
+        """
+        Hook. Called to run the full test (setup->test->teardown).
+
+        Wrap the printing of the the test results in additional information.
+        Handles running a test multiple times.
+        """
         item_test_id = TestId(item.nodeid.split("[::")[0])
         if item_test_id not in self._test_result:
             if item_test_id not in self._set_results:
@@ -130,9 +141,7 @@ class RunnerStochastics:
         policy = self.runner_config.policies[policy_id]
 
         if policy.out_of <= 0:
-            self._logger.debug(
-                f"Test run for `{item_test_id}` disabled by configuration"
-            )
+            self._logger.debug(f"Test run for `{item_test_id}` disabled by configuration")
             return False
 
         if len(self._test_result[item_test_id]) == 0:
@@ -143,34 +152,52 @@ class RunnerStochastics:
                 end="",
             )
 
-        reports = runtestprotocol(item, nextitem=nextitem)
-        test_passed = all(r.passed for r in reports)
-        self._test_result[item_test_id].append(test_passed)
-
-        outcome: str = ""
+        final_outcome: str = ""
 
         results_so_far = self._test_result[item_test_id]
         passes_so_far = results_so_far.count(True)
         if policy.pass_fast and passes_so_far >= policy.at_least:
-            outcome = "[green]PASSED[/green]"
+            final_outcome = "[green]PASSED[/green]"
 
         policy_allowed_fails = policy.out_of - policy.at_least
         fails_so_far = results_so_far.count(False)
-        if not outcome and (
+        if not final_outcome and (
             len(self._test_result[item_test_id]) == policy.out_of
             or (policy.fail_fast and fails_so_far > policy_allowed_fails)
         ):
-            outcome = "[red]FAILED[/red]"
+            final_outcome = "[red]FAILED[/red]"
 
-        if outcome:
+        revert_setup_only = False
+        if final_outcome:
+            item.config.option.setuponly = True
+            revert_setup_only = True
+
+        reports = runtestprotocol(item, nextitem=nextitem)
+        if revert_setup_only:
+            item.config.option.setuponly = False
+            skip_report = pytest.TestReport(
+                nodeid=item.nodeid,
+                location=item.location,
+                keywords=item.keywords,
+                outcome="skipped",
+                longrepr=("", 0, "Skipped: outcome already determined"),
+                when="call",
+            )
+            item.ihook.pytest_runtest_logreport(report=skip_report)
+            reports.insert(1, skip_report)
+
+        test_passed = all(r.passed for r in reports)
+        self._test_result[item_test_id].append(test_passed)
+
+        if final_outcome:
             comment = f"[green]{passes_so_far} pass(es) [/green][red]{fails_so_far} fail(s) [/red]"
 
             rich.print(
-                f"\n\r[blue]Stochastic Result:[/blue] {outcome} [{comment}]", end="\n\r"
+                f"\n\r[blue]Stochastic Result:[/blue] {final_outcome} [{comment}]",
+                end="\n\r",
             )
             self._did_space = True
-            self._test_result.pop(item_test_id)
-            test_passed = "FAILED" not in outcome
+            test_passed = "FAILED" not in final_outcome
             self._set_results[item_test_id] = test_passed
             return test_passed
 
